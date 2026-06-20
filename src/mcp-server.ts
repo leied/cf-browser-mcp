@@ -3,14 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { Env } from "./types";
-import {
-  addDomain,
-  addInstagramUser,
-  checkUrlAgainstBlocklist,
-  getBlocklist,
-  removeDomain,
-  removeInstagramUser,
-} from "./blocklist";
+import { checkUrlAgainstBlocklist, getBlocklist } from "./blocklist";
 import {
   fetchContent,
   fetchLinks,
@@ -388,97 +381,6 @@ export class BrowserMcp extends McpAgent<Env> {
         return {
           content: [
             { type: "text" as const, text: JSON.stringify(blocklist, null, 2) },
-          ],
-        };
-      },
-    );
-
-    this.server.registerTool(
-      "block_domain",
-      {
-        description:
-          "Add a domain to the blocklist. Subdomains of a blocked domain are blocked too.",
-        inputSchema: {
-          domain: z
-            .string()
-            .describe(
-              "e.g. 'example.com' — protocol/www/paths are stripped automatically",
-            ),
-        },
-      },
-      async ({ domain }) => {
-        const config = await addDomain(this.env, domain);
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Domains blocked: ${JSON.stringify(config.domains)}`,
-            },
-          ],
-        };
-      },
-    );
-
-    this.server.registerTool(
-      "unblock_domain",
-      {
-        description: "Remove a domain from the blocklist.",
-        inputSchema: { domain: z.string() },
-      },
-      async ({ domain }) => {
-        const config = await removeDomain(this.env, domain);
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Domains blocked: ${JSON.stringify(config.domains)}`,
-            },
-          ],
-        };
-      },
-    );
-
-    this.server.registerTool(
-      "block_instagram_user",
-      {
-        description:
-          "Block an Instagram username. Their profile page and /stories/<user>/ URLs are refused; posts and " +
-          "reels can't always be attributed to a user from the URL alone, so those aren't covered.",
-        inputSchema: {
-          username: z
-            .string()
-            .describe(
-              "e.g. '@someuser' or a full instagram.com/someuser URL — both normalize fine",
-            ),
-        },
-      },
-      async ({ username }) => {
-        const config = await addInstagramUser(this.env, username);
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Instagram users blocked: ${JSON.stringify(config.instagramUsers)}`,
-            },
-          ],
-        };
-      },
-    );
-
-    this.server.registerTool(
-      "unblock_instagram_user",
-      {
-        description: "Remove an Instagram username from the blocklist.",
-        inputSchema: { username: z.string() },
-      },
-      async ({ username }) => {
-        const config = await removeInstagramUser(this.env, username);
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Instagram users blocked: ${JSON.stringify(config.instagramUsers)}`,
-            },
           ],
         };
       },
