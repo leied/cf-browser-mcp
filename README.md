@@ -17,6 +17,9 @@ and Instagram usernames before it ever makes a request.
 - **Workers KV** for the blocklist, so you can edit it without redeploying.
 - **`agents/mcp`** (`McpAgent`) for the MCP server itself — Durable Object per
   session, Streamable HTTP transport.
+- **`@cloudflare/workers-oauth-provider`** for OAuth 2.0 auth — required by
+  claude.ai's connector UI. A simple password form gates access; the password
+  is your `MCP_AUTH_TOKEN`.
 
 No `@cloudflare/puppeteer` dependency — `quickAction()` is available on the
 binding directly. Add it later if you want full scripted browser sessions
@@ -56,20 +59,24 @@ any request — a blocked URL never reaches Browser Run.
 
 ```bash
 npm install
-# npx wrangler login
+npx wrangler login
 
 # KV namespace for the blocklist
 npx wrangler kv namespace create BLOCKLIST_KV
-# paste the returned "id" (and create a preview namespace for `wrangler dev`
-# the same way, or just reuse the same id for both while developing) into
-# wrangler.jsonc
+npx wrangler kv namespace create BLOCKLIST_KV --preview
 
-# secrets
-npx wrangler secret put MCP_AUTH_TOKEN
-npx wrangler secret put CF_ACCOUNT_ID    # only needed for crawl_*
-npx wrangler secret put CF_API_TOKEN     # token needs "Browser Rendering - Edit"
+# KV namespace for OAuth token storage (binding name is hardcoded by the library)
+npx wrangler kv namespace create OAUTH_KV
+npx wrangler kv namespace create OAUTH_KV --preview
 
-# seed the blocklist (edit blocklist.seed.json first)
+# Paste all four IDs into wrangler.jsonc (use wrangler.jsonc.example as a template)
+
+# Secrets
+npx wrangler secret put MCP_AUTH_TOKEN   # used as the OAuth login password
+npx wrangler secret put CF_ACCOUNT_ID   # only needed for crawl_*
+npx wrangler secret put CF_API_TOKEN    # token needs "Browser Rendering - Edit"
+
+# Seed the blocklist (edit blocklist.seed.json first)
 npx wrangler kv key put --binding=BLOCKLIST_KV "config:blocklist" --path=blocklist.seed.json --remote
 
 npx wrangler deploy
@@ -84,43 +91,33 @@ npm run dev   # already runs `wrangler dev --remote`
 
 ## Connecting to Claude
 
+Auth uses OAuth 2.0 (`@cloudflare/workers-oauth-provider`). When connecting,
+a browser popup asks for a password — enter your `MCP_AUTH_TOKEN` value.
+
+**claude.ai (web UI):** add a connector pointing at
+`https://<your-worker>.workers.dev/mcp`. The OAuth popup will appear
+automatically.
+
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http browser-mcp \
-  https://<your-worker>.workers.dev/mcp \
-  --header "Authorization: Bearer <your MCP_AUTH_TOKEN>"
+claude mcp add --transport http browser-mcp https://<your-worker>.workers.dev/mcp
 ```
 
-(Check `claude mcp add --help` for the exact current flags — this changes
-occasionally.)
+Claude Code will open a browser for the OAuth flow on first use.
 
-**Claude Desktop**, via the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)
-local proxy — edit your Claude Desktop config:
+**Claude Desktop**, via [`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
 
 ```json
 {
   "mcpServers": {
     "browser-mcp": {
       "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://<your-worker>.workers.dev/mcp",
-        "--header",
-        "Authorization: Bearer <your MCP_AUTH_TOKEN>"
-      ]
+      "args": ["mcp-remote", "https://<your-worker>.workers.dev/mcp"]
     }
   }
 }
 ```
-
-**claude.ai "Connectors" (web UI):** the hosted connector picker is built
-around OAuth, not static bearer tokens. For this personal-use server, your
-two practical options are: keep using it via Claude Code / Claude Desktop as
-above, or put the Worker behind **Cloudflare Access** (gate the URL itself,
-independent of MCP auth) instead of `MCP_AUTH_TOKEN`. Full OAuth support can
-be bolted on later following [Cloudflare's MCP OAuth guide](https://developers.cloudflare.com/agents/model-context-protocol/guides/remote-mcp-server/#add-authentication)
-if you want claude.ai's connector UI specifically.
 
 ## Cost awareness
 

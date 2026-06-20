@@ -25,6 +25,7 @@ export interface BrowserRunBinding {
 export interface Env {
   BROWSER: BrowserRunBinding;
   BLOCKLIST_KV: KVNamespace;
+  OAUTH_KV: KVNamespace; // name is hardcoded by @cloudflare/workers-oauth-provider
   MCP_OBJECT: DurableObjectNamespace;
 
   // Secrets — set with `wrangler secret put <NAME>` (or .dev.vars locally).

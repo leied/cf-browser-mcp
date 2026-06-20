@@ -10,13 +10,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "agents": "latest",
+    "@cloudflare/workers-oauth-provider": "^0.8.1",
     "@modelcontextprotocol/sdk": "latest",
+    "agents": "latest",
     "zod": "latest"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "latest",
     "typescript": "latest",
-    "wrangler": "latest",
-    "@cloudflare/workers-types": "latest"
+    "wrangler": "latest"
   }
 }
