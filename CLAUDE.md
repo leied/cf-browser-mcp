@@ -35,6 +35,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 **Request flow:** `src/index.ts` handles auth (timing-safe Bearer token check against `MCP_AUTH_TOKEN`) then forwards to `BrowserMcp.serve("/mcp")` which is a Cloudflare Agents SDK `McpAgent` — each MCP client session gets its own Durable Object instance.
 
 **Source files:**
+
 - `src/index.ts` — Worker entry point: auth middleware + routes to McpAgent
 - `src/mcp-server.ts` — `BrowserMcp extends McpAgent`: registers all MCP tools in `init()`
 - `src/browser-actions.ts` — wraps `env.BROWSER.quickAction()` for markdown/content/snapshot/links/pdf
@@ -43,6 +44,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 - `src/types.ts` — `Env`, `BlocklistConfig`, `BrowserRunBinding`, `QuickActionJsonResult`
 
 **Two browser access patterns:**
+
 1. **`env.BROWSER.quickAction(action, options)`** — synchronous binding for markdown/content/snapshot/links/pdf. No `@cloudflare/puppeteer` needed. Returns `QuickActionJsonResult<T>`.
 2. **Cloudflare REST API** (`api.cloudflare.com/client/v4/accounts/.../browser-rendering/crawl`) — used for crawl jobs because `/crawl` is async (initiate → poll → results). Requires `CF_ACCOUNT_ID` + `CF_API_TOKEN`.
 

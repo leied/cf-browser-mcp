@@ -58,7 +58,7 @@ any request — a blocked URL never reaches Browser Run.
 
 ```bash
 npm install
-npx wrangler login
+# npx wrangler login
 
 # KV namespace for the blocklist
 npx wrangler kv namespace create BLOCKLIST_KV

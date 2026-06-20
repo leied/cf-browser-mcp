@@ -1,22 +1,22 @@
 {
-	"name": "browser-mcp",
-	"version": "1.0.0",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"dev": "wrangler dev --remote",
-		"deploy": "wrangler deploy",
-		"tail": "wrangler tail",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"agents": "latest",
-		"@modelcontextprotocol/sdk": "latest",
-		"zod": "latest"
-	},
-	"devDependencies": {
-		"typescript": "latest",
-		"wrangler": "latest",
-		"@cloudflare/workers-types": "latest"
-	}
+  "name": "browser-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --remote",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "agents": "latest",
+    "@modelcontextprotocol/sdk": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "wrangler": "latest",
+    "@cloudflare/workers-types": "latest"
+  }
 }

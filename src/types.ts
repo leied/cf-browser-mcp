@@ -3,8 +3,8 @@
  */
 
 export interface BlocklistConfig {
-	domains: string[];
-	instagramUsers: string[];
+  domains: string[];
+  instagramUsers: string[];
 }
 
 /**
@@ -16,22 +16,25 @@ export interface BlocklistConfig {
  * type instead.
  */
 export interface BrowserRunBinding {
-	quickAction(action: string, options: Record<string, unknown>): Promise<Response>;
+  quickAction(
+    action: string,
+    options: Record<string, unknown>,
+  ): Promise<Response>;
 }
 
 export interface Env {
-	BROWSER: BrowserRunBinding;
-	BLOCKLIST_KV: KVNamespace;
-	MCP_OBJECT: DurableObjectNamespace;
+  BROWSER: BrowserRunBinding;
+  BLOCKLIST_KV: KVNamespace;
+  MCP_OBJECT: DurableObjectNamespace;
 
-	// Secrets — set with `wrangler secret put <NAME>` (or .dev.vars locally).
-	MCP_AUTH_TOKEN?: string;
-	CF_ACCOUNT_ID?: string;
-	CF_API_TOKEN?: string;
+  // Secrets — set with `wrangler secret put <NAME>` (or .dev.vars locally).
+  MCP_AUTH_TOKEN?: string;
+  CF_ACCOUNT_ID?: string;
+  CF_API_TOKEN?: string;
 }
 
 export interface QuickActionJsonResult<T = unknown> {
-	success: boolean;
-	result?: T;
-	errors?: { code: number; message: string }[];
+  success: boolean;
+  result?: T;
+  errors?: { code: number; message: string }[];
 }
