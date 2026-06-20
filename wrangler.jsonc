@@ -1,0 +1,47 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "browser-mcp",
+	"main": "src/index.ts",
+	// Bump this whenever you redeploy — quickAction() needs 2026-03-24 or later.
+	"compatibility_date": "2026-06-19",
+	"compatibility_flags": ["nodejs_compat"],
+
+	// Cloudflare Browser Run (headless Chrome). Quick Actions — markdown,
+	// content, snapshot, links, pdf — are called via env.BROWSER.quickAction()
+	// with no extra auth needed; the binding handles it.
+	"browser": {
+		"binding": "BROWSER"
+	},
+
+	// Workers KV namespace storing the domain + Instagram-username blocklist.
+	// Create it with:
+	//   npx wrangler kv namespace create BLOCKLIST_KV
+	// then paste the returned id below (and the preview_id for `wrangler dev`).
+	"kv_namespaces": [
+		{
+			"binding": "BLOCKLIST_KV",
+			"id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID",
+			"preview_id": "REPLACE_WITH_YOUR_KV_PREVIEW_ID"
+		}
+	],
+
+	// Durable Object backing the MCP server — one instance per client session.
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MCP_OBJECT",
+				"class_name": "BrowserMcp"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["BrowserMcp"]
+		}
+	],
+
+	"observability": {
+		"enabled": true
+	}
+}
