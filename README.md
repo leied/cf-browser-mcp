@@ -35,8 +35,6 @@ binding directly. Add it later if you want full scripted browser sessions
 | `get_crawl_status` | Poll/fetch results of a crawl job |
 | `cancel_crawl` | Cancel a running crawl job |
 | `list_blocklist` | Show the current blocklist |
-| `block_domain` / `unblock_domain` | Manage the domain blocklist |
-| `block_instagram_user` / `unblock_instagram_user` | Manage the Instagram username blocklist |
 
 Every page-reading tool and `crawl_site` checks the blocklist **before** making
 any request — a blocked URL never reaches Browser Run.
