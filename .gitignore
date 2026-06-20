@@ -1,2 +1,3 @@
 node_modules/
 blocklist.seed.json
+wrangler.jsonc
