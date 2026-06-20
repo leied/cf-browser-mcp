@@ -76,7 +76,8 @@ npx wrangler secret put MCP_AUTH_TOKEN   # used as the OAuth login password
 npx wrangler secret put CF_ACCOUNT_ID   # only needed for crawl_*
 npx wrangler secret put CF_API_TOKEN    # token needs "Browser Rendering - Edit"
 
-# Seed the blocklist (edit blocklist.seed.json first)
+# Seed the blocklist — copy the example and customize
+cp blocklist.seed.example.json blocklist.seed.json
 npx wrangler kv key put --binding=BLOCKLIST_KV "config:blocklist" --path=blocklist.seed.json --remote
 
 npx wrangler deploy

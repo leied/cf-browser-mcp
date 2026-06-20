@@ -1,5 +1,4 @@
 node_modules/
 blocklist.seed.json
-wrangler.jsonc
 .env
 blocklist.seed.json.md

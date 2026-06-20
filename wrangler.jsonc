@@ -13,21 +13,22 @@
     "binding": "BROWSER",
   },
 
+  // Workers KV namespace storing the domain + Instagram-username blocklist.
+  // Create it with:
+  //   npx wrangler kv namespace create BLOCKLIST_KV
+  // then paste the returned id below (and the preview_id for `wrangler dev`).
   "kv_namespaces": [
-    // Workers KV namespace storing the domain + Instagram-username blocklist.
-    // Create with: npx wrangler kv namespace create BLOCKLIST_KV
     {
       "binding": "BLOCKLIST_KV",
-      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID",
-      "preview_id": "REPLACE_WITH_YOUR_KV_PREVIEW_ID",
+      "id": "dd1b51fe62874dbe8a3935a955798810",
+      "preview_id": "48448de39eb8453caa844f2a69ea83ae",
     },
     // Used by @cloudflare/workers-oauth-provider to store auth codes and tokens.
-    // The binding name OAUTH_KV is hardcoded in the library.
     // Create with: npx wrangler kv namespace create OAUTH_KV
     {
       "binding": "OAUTH_KV",
-      "id": "REPLACE_WITH_OAUTH_KV_ID",
-      "preview_id": "REPLACE_WITH_OAUTH_KV_PREVIEW_ID",
+      "id": "c1a1850b80e04a0590315a2c6bc05811",
+      "preview_id": "5ec77cef9e674d248fb00fc65ad1b0d1",
     },
   ],
 
