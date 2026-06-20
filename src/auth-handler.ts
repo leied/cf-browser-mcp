@@ -3,7 +3,9 @@ import type { Env } from "./types";
 
 type AuthEnv = Env & { OAUTH_PROVIDER: OAuthHelpers };
 
-function renderForm(encodedState: string, error?: string): Response {
+const PENDING_TTL = 600; // 10 minutes for the user to submit the form
+
+function renderForm(stateKey: string, error?: string): Response {
 	const errorHtml = error
 		? `<p style="color:red;margin:0 0 12px">${error}</p>`
 		: "";
@@ -33,7 +35,7 @@ function renderForm(encodedState: string, error?: string): Response {
     <p>Enter your token to connect.</p>
     ${errorHtml}
     <form method="post">
-      <input type="hidden" name="state" value="${encodedState}" />
+      <input type="hidden" name="state" value="${stateKey}" />
       <input type="password" name="password" placeholder="MCP_AUTH_TOKEN" autofocus />
       <button type="submit">Connect</button>
     </form>
@@ -62,32 +64,36 @@ export const authHandler = {
 			if (!oauthReqInfo.clientId) {
 				return new Response("Invalid OAuth request", { status: 400 });
 			}
-			return renderForm(btoa(JSON.stringify(oauthReqInfo)));
+			const stateKey = crypto.randomUUID();
+			await env.OAUTH_KV.put(`pending:${stateKey}`, JSON.stringify(oauthReqInfo), {
+				expirationTtl: PENDING_TTL,
+			});
+			return renderForm(stateKey);
 		}
 
 		if (request.method === "POST") {
 			const formData = await request.formData();
 			const password = formData.get("password") as string | null;
-			const stateStr = formData.get("state") as string | null;
+			const stateKey = formData.get("state") as string | null;
 
-			let oauthReqInfo: AuthRequest;
-			try {
-				oauthReqInfo = JSON.parse(atob(stateStr ?? ""));
-			} catch {
-				return new Response("Invalid state", { status: 400 });
+			if (!stateKey) return new Response("Missing state", { status: 400 });
+
+			const stored = await env.OAUTH_KV.get<AuthRequest>(`pending:${stateKey}`, "json");
+			if (!stored) {
+				return new Response("Session expired — please try connecting again.", { status: 400 });
 			}
-
-			const encodedState = btoa(JSON.stringify(oauthReqInfo));
 
 			if (!env.MCP_AUTH_TOKEN || password !== env.MCP_AUTH_TOKEN) {
-				return renderForm(encodedState, "Incorrect token.");
+				return renderForm(stateKey, "Incorrect token.");
 			}
+
+			await env.OAUTH_KV.delete(`pending:${stateKey}`);
 
 			const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
 				metadata: { label: "owner" },
 				props: {},
-				request: oauthReqInfo,
-				scope: oauthReqInfo.scope,
+				request: stored,
+				scope: stored.scope,
 				userId: "owner",
 			});
 

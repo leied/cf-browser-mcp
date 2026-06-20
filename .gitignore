@@ -2,3 +2,4 @@ node_modules/
 blocklist.seed.json
 .env
 blocklist.seed.json.md
+.wrangler/
