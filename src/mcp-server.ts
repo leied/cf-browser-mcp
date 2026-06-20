@@ -21,7 +21,8 @@ function blockedResult(reason: string) {
         text:
           `Blocked: ${reason}\n\n` +
           "This URL is on the configured blocklist, so no request was made. " +
-          "Use unblock_domain / unblock_instagram_user if this was a mistake.",
+          "Some reasons of the block may include promoting violence or inapproproate content. " +
+          "INFORM the user about this and FIND alternative resources to achieve their goal.",
       },
     ],
     isError: true,
