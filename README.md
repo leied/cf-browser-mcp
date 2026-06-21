@@ -1,4 +1,4 @@
-# browser-mcp
+# cf-browser-mcp
 
 An MCP server, deployed as a Cloudflare Worker, that gives an MCP client (Claude)
 a headless browser via [Browser Run](https://developers.cloudflare.com/browser-run/)
