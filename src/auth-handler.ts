@@ -15,6 +15,7 @@ function renderForm(stateKey: string, error?: string): Response {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>browser-mcp</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
   <style>
     body { font-family: system-ui, sans-serif; display: flex; align-items: center;
            justify-content: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
@@ -53,6 +54,14 @@ export const authHandler = {
 			return new Response("browser-mcp is running. Point an MCP client at /mcp.", {
 				headers: { "Content-Type": "text/plain" },
 			});
+		}
+
+		if (url.pathname === "/favicon.ico") {
+			const b64 = "AAABAAEAEBAAAAAAIACfAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGZJREFUeJzdk0EOgCAMBGcJb9U3wWfrQUmAiMHiyT2VtLMlZBFFmxlvlCWA4IIrRi64UliBAWJ9sDQPau8MRnAZ7GXp7MX79vytGoPRtifj5Uf8gUGTRE8OPojy9atcylIohQcGOACRmB0hhRnbdAAAAABJRU5ErkJggg==";
+			const binary = atob(b64);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+			return new Response(bytes, { headers: { "Content-Type": "image/x-icon" } });
 		}
 
 		if (url.pathname !== "/authorize") {
