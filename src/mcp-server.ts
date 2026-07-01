@@ -12,6 +12,7 @@ import {
   fetchSnapshot,
 } from "./browser-actions";
 import { cancelCrawl, getCrawlStatus, startCrawlAndWait } from "./crawl";
+import { fetchYoutubeTranscript } from "./youtube-transcript";
 
 function blockedResult(reason: string) {
   return {
@@ -206,6 +207,41 @@ export class BrowserMcp extends McpAgent<Env> {
           return {
             content: [
               { type: "text" as const, text: JSON.stringify(links, null, 2) },
+            ],
+          };
+        } catch (err) {
+          return errorResult(err);
+        }
+      },
+    );
+
+    this.server.registerTool(
+      "fetch_youtube_transcript",
+      {
+        description:
+          "Fetch the transcript/captions for a YouTube video via youtube-transcript.io. " +
+          "Accepts a full YouTube URL (watch, shorts, youtu.be) or a bare 11-character video ID.",
+        inputSchema: {
+          video: z
+            .string()
+            .describe("YouTube URL or video ID."),
+        },
+      },
+      async ({ video }) => {
+        try {
+          const { title, language, text } = await fetchYoutubeTranscript(
+            this.env,
+            video,
+          );
+          const header = [title, language ? `[${language}]` : null]
+            .filter(Boolean)
+            .join(" ");
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: header ? `${header}\n\n${text}` : text,
+              },
             ],
           };
         } catch (err) {

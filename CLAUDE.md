@@ -26,6 +26,7 @@ npx wrangler kv namespace create OAUTH_KV --preview
 npx wrangler secret put MCP_AUTH_TOKEN   # used as the OAuth login password
 npx wrangler secret put CF_ACCOUNT_ID   # required for crawl_* tools only
 npx wrangler secret put CF_API_TOKEN    # needs "Browser Rendering - Edit" permission
+npx wrangler secret put YT_TRANSCRIPT_API_TOKEN   # required for fetch_youtube_transcript; token from youtube-transcript.io profile
 
 cp blocklist.seed.example.json blocklist.seed.json   # then customize
 npx wrangler kv key put --binding=BLOCKLIST_KV "config:blocklist" --path=blocklist.seed.json --remote --preview false
@@ -47,6 +48,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 - `src/mcp-server.ts` — `BrowserMcp extends McpAgent`: registers all MCP tools in `init()`
 - `src/browser-actions.ts` — wraps `env.BROWSER.quickAction()` for markdown/content/snapshot/links/pdf
 - `src/crawl.ts` — calls the Browser Run REST API directly for async crawl jobs (initiate + poll + cancel)
+- `src/youtube-transcript.ts` — calls the youtube-transcript.io REST API to fetch video transcripts
 - `src/blocklist.ts` — KV-backed blocklist: normalize/check domains and Instagram usernames
 - `src/types.ts` — `Env`, `BlocklistConfig`, `BrowserRunBinding`, `QuickActionJsonResult`
 
@@ -59,3 +61,5 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 **`crawl_site` behavior:** `startCrawlAndWait` polls for up to 45 seconds (3-second interval). If still running at the deadline, returns `jobId` with a null result — caller polls with `get_crawl_status`. Blocklist is only checked against the starting URL.
 
 **Browser time / cost:** every `quickAction()` response carries an `X-Browser-Ms-Used` header; the free plan allows 600 seconds/day. `crawl_site` with `render: false` fetches static HTML without consuming browser time.
+
+**`fetch_youtube_transcript`:** calls `POST https://www.youtube-transcript.io/api/transcripts` directly (no browser/quickAction involved) with `Authorization: Basic <YT_TRANSCRIPT_API_TOKEN>`. Accepts a full YouTube URL or bare video ID; `extractVideoId()` in `src/youtube-transcript.ts` handles watch/shorts/youtu.be/embed URL shapes. Returns the first available caption track's text joined into a single string.

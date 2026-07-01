@@ -32,6 +32,7 @@ export interface Env {
   MCP_AUTH_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;
+  YT_TRANSCRIPT_API_TOKEN?: string;
 }
 
 export interface QuickActionJsonResult<T = unknown> {
