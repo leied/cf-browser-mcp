@@ -222,9 +222,7 @@ export class BrowserMcp extends McpAgent<Env> {
           "Fetch the transcript/captions for a YouTube video via youtube-transcript.io. " +
           "Accepts a full YouTube URL (watch, shorts, youtu.be) or a bare 11-character video ID.",
         inputSchema: {
-          video: z
-            .string()
-            .describe("YouTube URL or video ID."),
+          video: z.string().describe("YouTube URL or video ID."),
         },
       },
       async ({ video }) => {

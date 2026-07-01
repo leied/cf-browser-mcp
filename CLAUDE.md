@@ -43,6 +43,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 **Auth flow:** When a client connects, the OAuthProvider redirects to `/authorize`, which shows a password form. The submitted password is checked against `MCP_AUTH_TOKEN`. On success, `OAUTH_PROVIDER.completeAuthorization()` issues an OAuth token stored in `OAUTH_KV`. The parsed auth request is stored in `OAUTH_KV` (not the form) to survive the GET→POST round-trip intact.
 
 **Source files:**
+
 - `src/index.ts` — entry point: `OAuthProvider` wrapping `BrowserMcp.serve("/mcp")`
 - `src/auth-handler.ts` — `/authorize` password form + `/` health check
 - `src/mcp-server.ts` — `BrowserMcp extends McpAgent`: registers all MCP tools in `init()`
@@ -53,6 +54,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 - `src/types.ts` — `Env`, `BlocklistConfig`, `BrowserRunBinding`, `QuickActionJsonResult`
 
 **Two browser access patterns:**
+
 1. **`env.BROWSER.quickAction(action, options)`** — synchronous binding for markdown/content/snapshot/links/pdf. No `@cloudflare/puppeteer` needed.
 2. **Cloudflare REST API** (`api.cloudflare.com/client/v4/accounts/.../browser-rendering/crawl`) — used for crawl jobs because `/crawl` is async (initiate → poll → results). Requires `CF_ACCOUNT_ID` + `CF_API_TOKEN`.
 

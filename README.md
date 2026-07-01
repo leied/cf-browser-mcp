@@ -27,17 +27,17 @@ binding directly. Add it later if you want full scripted browser sessions
 
 ## Tools
 
-| Tool | Does |
-|---|---|
-| `fetch_markdown` | Page → Markdown |
-| `fetch_content` | Page → rendered HTML |
-| `fetch_snapshot` | Page → markdown/HTML/screenshot/a11y tree in one call |
-| `fetch_pdf` | Page → PDF |
-| `get_links` | Page → list of links |
-| `crawl_site` | Crawl a site, return Markdown per page |
-| `get_crawl_status` | Poll/fetch results of a crawl job |
-| `cancel_crawl` | Cancel a running crawl job |
-| `list_blocklist` | Show the current blocklist |
+| Tool               | Does                                                  |
+| ------------------ | ----------------------------------------------------- |
+| `fetch_markdown`   | Page → Markdown                                       |
+| `fetch_content`    | Page → rendered HTML                                  |
+| `fetch_snapshot`   | Page → markdown/HTML/screenshot/a11y tree in one call |
+| `fetch_pdf`        | Page → PDF                                            |
+| `get_links`        | Page → list of links                                  |
+| `crawl_site`       | Crawl a site, return Markdown per page                |
+| `get_crawl_status` | Poll/fetch results of a crawl job                     |
+| `cancel_crawl`     | Cancel a running crawl job                            |
+| `list_blocklist`   | Show the current blocklist                            |
 
 Every page-reading tool and `crawl_site` checks the blocklist **before** making
 any request — a blocked URL never reaches Browser Run.
@@ -51,7 +51,7 @@ any request — a blocked URL never reaches Browser Run.
   can't be reliably attributed to a user from the URL alone, so those aren't
   covered by username blocking — only the domain blocklist would catch those
   if you block `instagram.com` outright.
-- **`crawl_site`** only checks the *starting* URL against the blocklist. If you
+- **`crawl_site`** only checks the _starting_ URL against the blocklist. If you
   pass `includeExternalLinks: true`, the crawler can reach other domains —
   use `excludePatterns` for that case.
 

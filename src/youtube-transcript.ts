@@ -32,11 +32,19 @@ export function extractVideoId(input: string): string {
     const segments = url.pathname.split("/").filter(Boolean);
     for (const key of ["shorts", "embed", "live"]) {
       const idx = segments.indexOf(key);
-      if (idx !== -1 && segments[idx + 1] && VIDEO_ID_RE.test(segments[idx + 1])) {
+      if (
+        idx !== -1 &&
+        segments[idx + 1] &&
+        VIDEO_ID_RE.test(segments[idx + 1])
+      ) {
         return segments[idx + 1];
       }
     }
-    if (url.hostname === "youtu.be" && segments[0] && VIDEO_ID_RE.test(segments[0])) {
+    if (
+      url.hostname === "youtu.be" &&
+      segments[0] &&
+      VIDEO_ID_RE.test(segments[0])
+    ) {
       return segments[0];
     }
   } catch {
