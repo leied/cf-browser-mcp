@@ -127,3 +127,16 @@ in `fetch_markdown`'s output as `[browser time: Xms]`) and crawl results
 include `browserSecondsUsed`. Free plan accounts are capped at 10 minutes of
 browser use/day — `crawl_site` with `render: false` (fast HTML fetch, no
 JS execution) avoids consuming browser time entirely for static pages.
+
+## Staying within tight Worker CPU budgets
+
+If your Worker is consistently hitting strict CPU caps (for example 10ms):
+
+- Keep per-request compute shallow. The server now caches blocklist reads in
+  memory for 30s so repeated tool calls don't repeatedly parse KV payloads.
+- Avoid expensive synchronous work on hot paths. Favicon bytes are precomputed
+  once at module load instead of base64-decoding on every `/favicon.ico` request.
+- Prefer lighter tools (`fetch_markdown`, `get_links`, crawl with
+  `render: false`) when full rendering/snapshots are not necessary.
+- Scale to a plan/profile with higher CPU allowances if your workload needs
+  heavier processing on each request.
