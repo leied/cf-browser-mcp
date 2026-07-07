@@ -7,6 +7,14 @@ import type { Env } from "./types";
 type AuthEnv = Env & { OAUTH_PROVIDER: OAuthHelpers };
 
 const PENDING_TTL = 600; // 10 minutes for the user to submit the form
+const FAVICON_BASE64 =
+  "AAABAAEAEBAAAAAAIACfAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGZJREFUeJzdk0EOgCAMBGcJb9U3wWfrQUmAiMHiyT2VtLMlZBFFmxlvlCWA4IIrRi64UliBAWJ9sDQPau8MRnAZ7GXp7MX79vytGoPRtifj5Uf8gUGTRE8OPojy9atcylIohQcGOACRmB0hhRnbdAAAAABJRU5ErkJggg==";
+const FAVICON_BYTES = (() => {
+  const binary = atob(FAVICON_BASE64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+})();
 
 function renderForm(stateKey: string, error?: string): Response {
   const errorHtml = error
@@ -63,12 +71,7 @@ export const authHandler = {
     }
 
     if (url.pathname === "/favicon.ico") {
-      const b64 =
-        "AAABAAEAEBAAAAAAIACfAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGZJREFUeJzdk0EOgCAMBGcJb9U3wWfrQUmAiMHiyT2VtLMlZBFFmxlvlCWA4IIrRi64UliBAWJ9sDQPau8MRnAZ7GXp7MX79vytGoPRtifj5Uf8gUGTRE8OPojy9atcylIohQcGOACRmB0hhRnbdAAAAABJRU5ErkJggg==";
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return new Response(bytes, {
+      return new Response(FAVICON_BYTES, {
         headers: { "Content-Type": "image/x-icon" },
       });
     }

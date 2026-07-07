@@ -2,8 +2,12 @@ import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { Env } from "./types";
-import { checkUrlAgainstBlocklist, getBlocklist } from "./blocklist";
+import type { BlocklistConfig, Env } from "./types";
+import {
+  DEFAULT_BLOCKLIST,
+  checkUrlAgainstBlocklist,
+  getBlocklist,
+} from "./blocklist";
 import {
   fetchContent,
   fetchLinks,
@@ -40,6 +44,30 @@ function errorResult(err: unknown) {
 
 export class BrowserMcp extends McpAgent<Env> {
   server = new McpServer({ name: "browser-mcp", version: "1.0.0" });
+  private readonly blocklistTtlMs = 30_000;
+  private blocklistCache:
+    | { value: BlocklistConfig; expiresAt: number }
+    | null = null;
+  private blocklistFetchPromise: Promise<BlocklistConfig> | null = null;
+
+  private async getBlocklistCached(): Promise<BlocklistConfig> {
+    const now = Date.now();
+    if (this.blocklistCache && this.blocklistCache.expiresAt > now) {
+      return this.blocklistCache.value;
+    }
+
+    if (!this.blocklistFetchPromise) {
+      this.blocklistFetchPromise = getBlocklist(this.env)
+        .catch(() => this.blocklistCache?.value ?? { ...DEFAULT_BLOCKLIST })
+        .finally(() => {
+          this.blocklistFetchPromise = null;
+        });
+    }
+
+    const value = await this.blocklistFetchPromise;
+    this.blocklistCache = { value, expiresAt: now + this.blocklistTtlMs };
+    return value;
+  }
 
   async init() {
     // ---------------------------------------------------------------
@@ -55,7 +83,7 @@ export class BrowserMcp extends McpAgent<Env> {
         inputSchema: { url: z.string().url() },
       },
       async ({ url }) => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         const check = checkUrlAgainstBlocklist(url, blocklist);
         if (check.blocked) return blockedResult(check.reason!);
 
@@ -82,7 +110,7 @@ export class BrowserMcp extends McpAgent<Env> {
         inputSchema: { url: z.string().url() },
       },
       async ({ url }) => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         const check = checkUrlAgainstBlocklist(url, blocklist);
         if (check.blocked) return blockedResult(check.reason!);
 
@@ -119,7 +147,7 @@ export class BrowserMcp extends McpAgent<Env> {
         },
       },
       async ({ url, formats }) => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         const check = checkUrlAgainstBlocklist(url, blocklist);
         if (check.blocked) return blockedResult(check.reason!);
 
@@ -166,7 +194,7 @@ export class BrowserMcp extends McpAgent<Env> {
         inputSchema: { url: z.string().url() },
       },
       async ({ url }) => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         const check = checkUrlAgainstBlocklist(url, blocklist);
         if (check.blocked) return blockedResult(check.reason!);
 
@@ -198,7 +226,7 @@ export class BrowserMcp extends McpAgent<Env> {
         inputSchema: { url: z.string().url() },
       },
       async ({ url }) => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         const check = checkUrlAgainstBlocklist(url, blocklist);
         if (check.blocked) return blockedResult(check.reason!);
 
@@ -291,7 +319,7 @@ export class BrowserMcp extends McpAgent<Env> {
         includeExternalLinks,
         includeSubdomains,
       }) => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         const check = checkUrlAgainstBlocklist(url, blocklist);
         if (check.blocked) return blockedResult(check.reason!);
 
@@ -412,7 +440,7 @@ export class BrowserMcp extends McpAgent<Env> {
         inputSchema: {},
       },
       async () => {
-        const blocklist = await getBlocklist(this.env);
+        const blocklist = await this.getBlocklistCached();
         return {
           content: [
             { type: "text" as const, text: JSON.stringify(blocklist, null, 2) },
