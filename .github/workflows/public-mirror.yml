@@ -1,0 +1,50 @@
+# Publishes a scrubbed, single-commit copy of this repo to a public repo.
+#
+# One-time setup (nothing runs until PUBLIC_MIRROR_REPO is set):
+#   1. Create the empty public repo, e.g. leied/cf-browser-mcp-public.
+#   2. ssh-keygen -t ed25519 -N "" -f mirror_key
+#   3. Public repo → Settings → Deploy keys → add mirror_key.pub, tick "Allow write access".
+#   4. This repo → Settings → Secrets and variables → Actions:
+#        secret   PUBLIC_MIRROR_DEPLOY_KEY = contents of mirror_key
+#        variable PUBLIC_MIRROR_REPO       = leied/cf-browser-mcp-public
+#   5. Delete mirror_key / mirror_key.pub locally.
+#
+# Each run force-pushes the public repo's `main`, so treat it as output only.
+name: Public mirror
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-mirror
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    if: vars.PUBLIC_MIRROR_REPO != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build mirror
+        run: scripts/public-mirror.sh "$RUNNER_TEMP/mirror"
+
+      - name: Push mirror
+        env:
+          DEPLOY_KEY: ${{ secrets.PUBLIC_MIRROR_DEPLOY_KEY }}
+          PUBLIC_REPO: ${{ vars.PUBLIC_MIRROR_REPO }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::PUBLIC_MIRROR_DEPLOY_KEY secret is not set"
+            exit 1
+          fi
+          key="$RUNNER_TEMP/deploy_key"
+          install -m 600 /dev/null "$key"
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git -C "$RUNNER_TEMP/mirror" push --force "git@github.com:${PUBLIC_REPO}.git" main

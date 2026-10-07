@@ -21,14 +21,14 @@ npx wrangler kv namespace create BLOCKLIST_KV
 npx wrangler kv namespace create BLOCKLIST_KV --preview
 npx wrangler kv namespace create OAUTH_KV        # binding name is hardcoded by @cloudflare/workers-oauth-provider
 npx wrangler kv namespace create OAUTH_KV --preview
-# Paste the four IDs into wrangler.jsonc (use wrangler.jsonc.example as a template)
+# Paste the four IDs into the kv_namespaces section of wrangler.jsonc
 
 npx wrangler secret put MCP_AUTH_TOKEN   # used as the OAuth login password
 npx wrangler secret put CF_ACCOUNT_ID   # required for crawl_* tools only
 npx wrangler secret put CF_API_TOKEN    # needs "Browser Rendering - Edit" permission
 npx wrangler secret put YT_TRANSCRIPT_API_TOKEN   # required for fetch_youtube_transcript; token from youtube-transcript.io profile
 
-cp blocklist.seed.example.json blocklist.seed.json   # then customize
+cp blocklist.seed.json.example blocklist.seed.json   # then customize
 npx wrangler kv key put --binding=BLOCKLIST_KV "config:blocklist" --path=blocklist.seed.json --remote --preview false
 ```
 
@@ -51,6 +51,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 - `src/crawl.ts` — calls the Browser Run REST API directly for async crawl jobs (initiate + poll + cancel)
 - `src/youtube-transcript.ts` — calls the youtube-transcript.io REST API to fetch video transcripts
 - `src/blocklist.ts` — KV-backed blocklist: normalize/check domains and Instagram usernames
+- `scripts/public-mirror.sh` — builds a scrubbed single-commit public copy of the repo (KV IDs replaced, fresh history); never itself published. `.github/workflows/public-mirror.yml` runs it on every push to `main` and force-pushes the result to the repo in the `PUBLIC_MIRROR_REPO` Actions variable (setup steps are in the workflow's header comment)
 - `src/types.ts` — `Env`, `BlocklistConfig`, `BrowserRunBinding`, `QuickActionJsonResult`
 
 **Two browser access patterns:**
@@ -58,7 +59,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 1. **`env.BROWSER.quickAction(action, options)`** — synchronous binding for markdown/content/snapshot/links/pdf. No `@cloudflare/puppeteer` needed.
 2. **Cloudflare REST API** (`api.cloudflare.com/client/v4/accounts/.../browser-rendering/crawl`) — used for crawl jobs because `/crawl` is async (initiate → poll → results). Requires `CF_ACCOUNT_ID` + `CF_API_TOKEN`.
 
-**Blocklist:** stored as a single JSON object under `config:blocklist` in `BLOCKLIST_KV`. Domain matching covers subdomains. Instagram username matching covers profile and `/stories/<user>/` URLs only — posts/reels (`/p/`, `/reel/`) can't be reliably attributed to a username from the URL alone. `blocklist.seed.json` is gitignored (personal); `blocklist.seed.example.json` is the committed public template.
+**Blocklist:** stored as a single JSON object under `config:blocklist` in `BLOCKLIST_KV`. Domain matching covers subdomains. Instagram username matching covers profile and `/stories/<user>/` URLs only — posts/reels (`/p/`, `/reel/`) can't be reliably attributed to a username from the URL alone. `blocklist.seed.json` is gitignored (personal); `blocklist.seed.json.example` is the committed public template.
 
 **`crawl_site` behavior:** `startCrawlAndWait` polls for up to 45 seconds (3-second interval). If still running at the deadline, returns `jobId` with a null result — caller polls with `get_crawl_status`. Blocklist is only checked against the starting URL.
 
