@@ -23,6 +23,7 @@ AUTHOR_EMAIL="${MIRROR_AUTHOR_EMAIL:-149900992+leied@users.noreply.github.com}"
 # Paths that stay private (relative to the repo root).
 MIRROR_EXCLUDE=(
   scripts/public-mirror.sh
+  .github/workflows/public-mirror.yml
 )
 
 if [[ -e "$OUT" ]]; then
@@ -40,7 +41,8 @@ git -C "$ROOT" archive --format=tar HEAD | tar -x -C "$OUT"
 for path in "${MIRROR_EXCLUDE[@]}"; do
   rm -rf "${OUT:?}/$path"
 done
-rmdir "$OUT/scripts" 2>/dev/null || true
+# Remove directories the excludes left empty.
+find "$OUT" -mindepth 1 -type d -empty -delete
 
 # Scrub KV namespace IDs (32 hex chars) in wrangler.jsonc.
 sed -i -E \

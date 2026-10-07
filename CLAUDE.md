@@ -51,7 +51,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 - `src/crawl.ts` — calls the Browser Run REST API directly for async crawl jobs (initiate + poll + cancel)
 - `src/youtube-transcript.ts` — calls the youtube-transcript.io REST API to fetch video transcripts
 - `src/blocklist.ts` — KV-backed blocklist: normalize/check domains and Instagram usernames
-- `scripts/public-mirror.sh` — builds a scrubbed single-commit public copy of the repo (KV IDs replaced, fresh history); never itself published
+- `scripts/public-mirror.sh` — builds a scrubbed single-commit public copy of the repo (KV IDs replaced, fresh history); never itself published. `.github/workflows/public-mirror.yml` runs it on every push to `main` and force-pushes the result to the repo in the `PUBLIC_MIRROR_REPO` Actions variable (setup steps are in the workflow's header comment)
 - `src/types.ts` — `Env`, `BlocklistConfig`, `BrowserRunBinding`, `QuickActionJsonResult`
 
 **Two browser access patterns:**
