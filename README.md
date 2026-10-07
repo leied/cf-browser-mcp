@@ -27,17 +27,18 @@ binding directly. Add it later if you want full scripted browser sessions
 
 ## Tools
 
-| Tool               | Does                                                  |
-| ------------------ | ----------------------------------------------------- |
-| `fetch_markdown`   | Page → Markdown                                       |
-| `fetch_content`    | Page → rendered HTML                                  |
-| `fetch_snapshot`   | Page → markdown/HTML/screenshot/a11y tree in one call |
-| `fetch_pdf`        | Page → PDF                                            |
-| `get_links`        | Page → list of links                                  |
-| `crawl_site`       | Crawl a site, return Markdown per page                |
-| `get_crawl_status` | Poll/fetch results of a crawl job                     |
-| `cancel_crawl`     | Cancel a running crawl job                            |
-| `list_blocklist`   | Show the current blocklist                            |
+| Tool                       | Does                                                     |
+| -------------------------- | -------------------------------------------------------- |
+| `fetch_markdown`           | Page → Markdown                                          |
+| `fetch_content`            | Page → rendered HTML                                     |
+| `fetch_snapshot`           | Page → markdown/HTML/screenshot/a11y tree in one call    |
+| `fetch_pdf`                | Page → PDF                                               |
+| `get_links`                | Page → list of links                                     |
+| `fetch_youtube_transcript` | YouTube URL/ID → transcript text (youtube-transcript.io) |
+| `crawl_site`               | Crawl a site, return Markdown per page                   |
+| `get_crawl_status`         | Poll/fetch results of a crawl job                        |
+| `cancel_crawl`             | Cancel a running crawl job                               |
+| `list_blocklist`           | Show the current blocklist                               |
 
 Every page-reading tool and `crawl_site` checks the blocklist **before** making
 any request — a blocked URL never reaches Browser Run.
@@ -69,15 +70,16 @@ npx wrangler kv namespace create BLOCKLIST_KV --preview
 npx wrangler kv namespace create OAUTH_KV
 npx wrangler kv namespace create OAUTH_KV --preview
 
-# Paste all four IDs into wrangler.jsonc (use wrangler.jsonc.example as a template)
+# Paste all four IDs into the kv_namespaces section of wrangler.jsonc
 
 # Secrets
 npx wrangler secret put MCP_AUTH_TOKEN   # used as the OAuth login password
 npx wrangler secret put CF_ACCOUNT_ID   # only needed for crawl_*
 npx wrangler secret put CF_API_TOKEN    # token needs "Browser Rendering - Edit"
+npx wrangler secret put YT_TRANSCRIPT_API_TOKEN   # only needed for fetch_youtube_transcript
 
 # Seed the blocklist — copy the example and customize
-cp blocklist.seed.example.json blocklist.seed.json
+cp blocklist.seed.json.example blocklist.seed.json
 npx wrangler kv key put --binding=BLOCKLIST_KV "config:blocklist" --path=blocklist.seed.json --remote
 
 npx wrangler deploy
@@ -140,3 +142,7 @@ If your Worker is consistently hitting strict CPU caps (for example 10ms):
   `render: false`) when full rendering/snapshots are not necessary.
 - Scale to a plan/profile with higher CPU allowances if your workload needs
   heavier processing on each request.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

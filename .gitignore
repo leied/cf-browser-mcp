@@ -3,3 +3,4 @@ blocklist.seed.json
 .env
 blocklist.seed.json.md
 .wrangler/
+.dev.vars

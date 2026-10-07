@@ -1,0 +1,5 @@
+# Copy to .dev.vars for `npm run dev`. Never commit .dev.vars.
+MCP_AUTH_TOKEN=change-me-to-a-long-random-string
+CF_ACCOUNT_ID=
+CF_API_TOKEN=
+YT_TRANSCRIPT_API_TOKEN=
