@@ -49,6 +49,24 @@ export class BrowserMcp extends McpAgent<Env> {
     | { value: BlocklistConfig; expiresAt: number }
     | null = null;
   private blocklistFetchPromise: Promise<BlocklistConfig> | null = null;
+  // Upstream APIs (Browser Run, youtube-transcript.io) reject bursts with
+  // "rate limit exceeded", so outbound calls are queued 1s apart.
+  private readonly minRequestIntervalMs = 1_000;
+  private nextRequestAt = 0;
+
+  /**
+   * Waits until this session's next request slot. The slot is reserved
+   * synchronously, so concurrent tool calls queue up in order instead of
+   * all firing at once.
+   */
+  private async throttle(): Promise<void> {
+    const now = Date.now();
+    const startAt = Math.max(now, this.nextRequestAt);
+    this.nextRequestAt = startAt + this.minRequestIntervalMs;
+    if (startAt > now) {
+      await new Promise((resolve) => setTimeout(resolve, startAt - now));
+    }
+  }
 
   private async getBlocklistCached(): Promise<BlocklistConfig> {
     const now = Date.now();
@@ -88,6 +106,7 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
+          await this.throttle();
           const { markdown, msUsed } = await fetchMarkdown(this.env, url);
           const content: { type: "text"; text: string }[] = [
             { type: "text", text: markdown },
@@ -115,6 +134,7 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
+          await this.throttle();
           const { html } = await fetchContent(this.env, url);
           return { content: [{ type: "text" as const, text: html }] };
         } catch (err) {
@@ -152,6 +172,7 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
+          await this.throttle();
           const snap = await fetchSnapshot(this.env, url, formats);
           const content: Array<
             | { type: "text"; text: string }
@@ -199,6 +220,7 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
+          await this.throttle();
           const { pdfBase64 } = await fetchPdf(this.env, url);
           return {
             content: [
@@ -231,6 +253,7 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
+          await this.throttle();
           const { links } = await fetchLinks(this.env, url);
           return {
             content: [
@@ -255,6 +278,7 @@ export class BrowserMcp extends McpAgent<Env> {
       },
       async ({ video }) => {
         try {
+          await this.throttle();
           const { title, language, text } = await fetchYoutubeTranscript(
             this.env,
             video,
@@ -324,6 +348,7 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
+          await this.throttle();
           const { jobId, result } = await startCrawlAndWait(this.env, url, {
             limit,
             depth,
@@ -392,6 +417,7 @@ export class BrowserMcp extends McpAgent<Env> {
       },
       async ({ jobId, status, cursor, limit }) => {
         try {
+          await this.throttle();
           const result = await getCrawlStatus(this.env, jobId, {
             status,
             cursor,
@@ -416,6 +442,7 @@ export class BrowserMcp extends McpAgent<Env> {
       },
       async ({ jobId }) => {
         try {
+          await this.throttle();
           await cancelCrawl(this.env, jobId);
           return {
             content: [

@@ -62,6 +62,8 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 
 **`crawl_site` behavior:** `startCrawlAndWait` polls for up to 45 seconds (3-second interval). If still running at the deadline, returns `jobId` with a null result — caller polls with `get_crawl_status`. Blocklist is only checked against the starting URL.
 
+**Rate limiting:** `BrowserMcp.throttle()` spaces outbound upstream calls at least 1 second apart per MCP session (`minRequestIntervalMs`). Concurrent tool calls are queued, not rejected. It's in-memory per Durable Object, so separate sessions are throttled independently.
+
 **Browser time / cost:** every `quickAction()` response carries an `X-Browser-Ms-Used` header; the free plan allows 600 seconds/day. `crawl_site` with `render: false` fetches static HTML without consuming browser time.
 
 **`fetch_youtube_transcript`:** calls `POST https://www.youtube-transcript.io/api/transcripts` directly (no browser/quickAction involved) with `Authorization: Basic <YT_TRANSCRIPT_API_TOKEN>`. Accepts a full YouTube URL or bare video ID; `extractVideoId()` in `src/youtube-transcript.ts` handles watch/shorts/youtu.be/embed URL shapes. Returns the first available caption track's text joined into a single string.

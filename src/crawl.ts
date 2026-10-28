@@ -162,13 +162,16 @@ export async function startCrawlAndWait(
   const jobId = await startCrawl(env, url, opts);
   const deadline = Date.now() + maxWaitMs;
 
+  // Sleep before each poll (not after) so we never hit the API twice
+  // back-to-back right after initiating the job.
   while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
     const status = await getCrawlStatus(env, jobId, { limit: 1 });
     if (status.status !== "running") {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
       const full = await getCrawlStatus(env, jobId);
       return { jobId, result: full };
     }
-    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
   }
 
   return { jobId, result: null }; // still running — caller polls get_crawl_status later
