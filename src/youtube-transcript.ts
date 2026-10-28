@@ -1,4 +1,5 @@
 import type { Env } from "./types";
+import { throwIfRateLimited } from "./rate-limit";
 
 interface TranscriptCue {
   text: string;
@@ -80,6 +81,7 @@ export async function fetchYoutubeTranscript(
     body: JSON.stringify({ ids: [videoId] }),
   });
 
+  throwIfRateLimited(res);
   if (!res.ok) {
     const body = await res.text();
     throw new Error(

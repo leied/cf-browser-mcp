@@ -1,4 +1,5 @@
 import type { Env } from "./types";
+import { RateLimitError, sleep, throwIfRateLimited } from "./rate-limit";
 
 // /crawl is an async job and isn't exposed through quickAction() in a way
 // that's documented for polling, so this calls the REST API directly with a
@@ -71,6 +72,7 @@ export async function startCrawl(
       body: JSON.stringify(body),
     },
   );
+  throwIfRateLimited(res);
 
   const data = (await res.json()) as {
     success: boolean;
@@ -122,6 +124,7 @@ export async function getCrawlStatus(
     `${API_BASE}/accounts/${accountId}/browser-rendering/crawl/${jobId}${qs ? `?${qs}` : ""}`,
     { headers: { Authorization: `Bearer ${apiToken}` } },
   );
+  throwIfRateLimited(res);
 
   const data = (await res.json()) as {
     success: boolean;
@@ -146,6 +149,7 @@ export async function cancelCrawl(env: Env, jobId: string): Promise<void> {
       headers: { Authorization: `Bearer ${apiToken}` },
     },
   );
+  throwIfRateLimited(res);
   if (!res.ok) {
     throw new Error(`Failed to cancel crawl job ${jobId} (${res.status})`);
   }
@@ -162,13 +166,27 @@ export async function startCrawlAndWait(
   const jobId = await startCrawl(env, url, opts);
   const deadline = Date.now() + maxWaitMs;
 
+  // Sleep before each poll (not after) so we never hit the API twice
+  // back-to-back right after initiating the job. A rate-limited poll just
+  // waits for the next round instead of failing the crawl.
+  let waitMs = pollIntervalMs;
   while (Date.now() < deadline) {
-    const status = await getCrawlStatus(env, jobId, { limit: 1 });
-    if (status.status !== "running") {
-      const full = await getCrawlStatus(env, jobId);
-      return { jobId, result: full };
+    await sleep(waitMs);
+    waitMs = pollIntervalMs;
+    try {
+      const status = await getCrawlStatus(env, jobId, { limit: 1 });
+      if (status.status !== "running") {
+        await sleep(1_000);
+        const full = await getCrawlStatus(env, jobId);
+        return { jobId, result: full };
+      }
+    } catch (err) {
+      if (!(err instanceof RateLimitError)) throw err;
+      // Never let a rate limit escape once the job exists: the caller would
+      // retry startCrawlAndWait and launch a duplicate crawl. Past the
+      // deadline we fall through and return the jobId for later polling.
+      waitMs = Math.max(pollIntervalMs, err.retryAfterMs ?? 0);
     }
-    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
   }
 
   return { jobId, result: null }; // still running — caller polls get_crawl_status later

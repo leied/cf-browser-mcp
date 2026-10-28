@@ -17,6 +17,7 @@ import {
 } from "./browser-actions";
 import { cancelCrawl, getCrawlStatus, startCrawlAndWait } from "./crawl";
 import { fetchYoutubeTranscript } from "./youtube-transcript";
+import { RateLimitError, sleep } from "./rate-limit";
 
 function blockedResult(reason: string) {
   return {
@@ -49,6 +50,54 @@ export class BrowserMcp extends McpAgent<Env> {
     | { value: BlocklistConfig; expiresAt: number }
     | null = null;
   private blocklistFetchPromise: Promise<BlocklistConfig> | null = null;
+  // Upstream APIs (Browser Run, youtube-transcript.io) reject bursts with
+  // "rate limit exceeded". Outbound calls run through a FIFO queue spaced
+  // 1s apart; a rate-limited call is retried after the upstream's
+  // Retry-After (or a backoff) instead of failing. Only authenticated
+  // clients reach this, so holding requests in a queue is safe.
+  private readonly minRequestIntervalMs = 1_000;
+  private readonly maxQueueWaitMs = 45_000;
+  private queueTail: Promise<void> = Promise.resolve();
+  private lastRequestAt = 0;
+  private pausedUntil = 0;
+
+  /** Resolves when this call reaches the head of the queue. */
+  private acquireSlot(): Promise<void> {
+    const slot = this.queueTail.then(async () => {
+      // Loop because pausedUntil can move forward while we sleep (a call
+      // ahead of us got rate-limited).
+      for (;;) {
+        const waitMs =
+          Math.max(
+            this.lastRequestAt + this.minRequestIntervalMs,
+            this.pausedUntil,
+          ) - Date.now();
+        if (waitMs <= 0) break;
+        await sleep(waitMs);
+      }
+      this.lastRequestAt = Date.now();
+    });
+    this.queueTail = slot;
+    return slot;
+  }
+
+  private async callUpstream<T>(fn: () => Promise<T>): Promise<T> {
+    const deadline = Date.now() + this.maxQueueWaitMs;
+    for (let attempt = 0; ; attempt++) {
+      await this.acquireSlot();
+      try {
+        return await fn();
+      } catch (err) {
+        if (!(err instanceof RateLimitError)) throw err;
+        const backoffMs =
+          err.retryAfterMs ?? Math.min(1_000 * 2 ** attempt, 10_000);
+        if (Date.now() + backoffMs > deadline) throw err;
+        // Pause the whole queue, not just this call: everything behind it
+        // would hit the same limit.
+        this.pausedUntil = Math.max(this.pausedUntil, Date.now() + backoffMs);
+      }
+    }
+  }
 
   private async getBlocklistCached(): Promise<BlocklistConfig> {
     const now = Date.now();
@@ -88,7 +137,9 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
-          const { markdown, msUsed } = await fetchMarkdown(this.env, url);
+          const { markdown, msUsed } = await this.callUpstream(() =>
+            fetchMarkdown(this.env, url),
+          );
           const content: { type: "text"; text: string }[] = [
             { type: "text", text: markdown },
           ];
@@ -115,7 +166,9 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
-          const { html } = await fetchContent(this.env, url);
+          const { html } = await this.callUpstream(() =>
+            fetchContent(this.env, url),
+          );
           return { content: [{ type: "text" as const, text: html }] };
         } catch (err) {
           return errorResult(err);
@@ -152,7 +205,9 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
-          const snap = await fetchSnapshot(this.env, url, formats);
+          const snap = await this.callUpstream(() =>
+            fetchSnapshot(this.env, url, formats),
+          );
           const content: Array<
             | { type: "text"; text: string }
             | { type: "image"; data: string; mimeType: string }
@@ -199,7 +254,9 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
-          const { pdfBase64 } = await fetchPdf(this.env, url);
+          const { pdfBase64 } = await this.callUpstream(() =>
+            fetchPdf(this.env, url),
+          );
           return {
             content: [
               {
@@ -231,7 +288,9 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
-          const { links } = await fetchLinks(this.env, url);
+          const { links } = await this.callUpstream(() =>
+            fetchLinks(this.env, url),
+          );
           return {
             content: [
               { type: "text" as const, text: JSON.stringify(links, null, 2) },
@@ -255,9 +314,8 @@ export class BrowserMcp extends McpAgent<Env> {
       },
       async ({ video }) => {
         try {
-          const { title, language, text } = await fetchYoutubeTranscript(
-            this.env,
-            video,
+          const { title, language, text } = await this.callUpstream(() =>
+            fetchYoutubeTranscript(this.env, video),
           );
           const header = [title, language ? `[${language}]` : null]
             .filter(Boolean)
@@ -324,15 +382,17 @@ export class BrowserMcp extends McpAgent<Env> {
         if (check.blocked) return blockedResult(check.reason!);
 
         try {
-          const { jobId, result } = await startCrawlAndWait(this.env, url, {
-            limit,
-            depth,
-            formats: ["markdown"],
-            includePatterns,
-            excludePatterns,
-            includeExternalLinks,
-            includeSubdomains,
-          });
+          const { jobId, result } = await this.callUpstream(() =>
+            startCrawlAndWait(this.env, url, {
+              limit,
+              depth,
+              formats: ["markdown"],
+              includePatterns,
+              excludePatterns,
+              includeExternalLinks,
+              includeSubdomains,
+            }),
+          );
 
           if (!result) {
             return {
@@ -392,11 +452,13 @@ export class BrowserMcp extends McpAgent<Env> {
       },
       async ({ jobId, status, cursor, limit }) => {
         try {
-          const result = await getCrawlStatus(this.env, jobId, {
-            status,
-            cursor,
-            limit,
-          });
+          const result = await this.callUpstream(() =>
+            getCrawlStatus(this.env, jobId, {
+              status,
+              cursor,
+              limit,
+            }),
+          );
           return {
             content: [
               { type: "text" as const, text: JSON.stringify(result, null, 2) },
@@ -416,7 +478,7 @@ export class BrowserMcp extends McpAgent<Env> {
       },
       async ({ jobId }) => {
         try {
-          await cancelCrawl(this.env, jobId);
+          await this.callUpstream(() => cancelCrawl(this.env, jobId));
           return {
             content: [
               { type: "text" as const, text: `Crawl job ${jobId} cancelled.` },
