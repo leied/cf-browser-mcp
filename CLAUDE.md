@@ -50,6 +50,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 - `src/browser-actions.ts` — wraps `env.BROWSER.quickAction()` for markdown/content/snapshot/links/pdf
 - `src/crawl.ts` — calls the Browser Run REST API directly for async crawl jobs (initiate + poll + cancel)
 - `src/youtube-transcript.ts` — calls the youtube-transcript.io REST API to fetch video transcripts
+- `src/rate-limit.ts` — `RateLimitError` + `throwIfRateLimited()` used by all upstream clients
 - `src/blocklist.ts` — KV-backed blocklist: normalize/check domains and Instagram usernames
 - `src/types.ts` — `Env`, `BlocklistConfig`, `BrowserRunBinding`, `QuickActionJsonResult`
 
@@ -62,7 +63,7 @@ This is a Cloudflare Worker that exposes an MCP server over Streamable HTTP at `
 
 **`crawl_site` behavior:** `startCrawlAndWait` polls for up to 45 seconds (3-second interval). If still running at the deadline, returns `jobId` with a null result — caller polls with `get_crawl_status`. Blocklist is only checked against the starting URL.
 
-**Rate limiting:** `BrowserMcp.throttle()` spaces outbound upstream calls at least 1 second apart per MCP session (`minRequestIntervalMs`). Concurrent tool calls are queued, not rejected. It's in-memory per Durable Object, so separate sessions are throttled independently.
+**Rate limiting:** upstream calls go through `BrowserMcp.callUpstream()`, a per-session FIFO queue that spaces requests at least 1 second apart (`minRequestIntervalMs`). Upstream clients throw `RateLimitError` (`src/rate-limit.ts`) on HTTP 429 or a "rate limit" error message; `callUpstream` then pauses the whole queue for the `Retry-After` (or exponential backoff, capped at 10s) and retries, giving up after `maxQueueWaitMs` (45s). Requests are queued rather than rejected because only OAuth-authenticated clients reach `/mcp`. `startCrawlAndWait` swallows rate limits once the job exists so a retry can never launch a duplicate crawl. The queue is in-memory per Durable Object, so separate sessions are throttled independently.
 
 **Browser time / cost:** every `quickAction()` response carries an `X-Browser-Ms-Used` header; the free plan allows 600 seconds/day. `crawl_site` with `render: false` fetches static HTML without consuming browser time.
 

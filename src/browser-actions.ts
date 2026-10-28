@@ -1,11 +1,14 @@
 import type { Env, QuickActionJsonResult } from "./types";
+import { throwIfRateLimited } from "./rate-limit";
 
 async function parseJsonResult<T>(res: Response): Promise<T> {
+  throwIfRateLimited(res);
   const data = (await res.json()) as QuickActionJsonResult<T>;
   if (!data.success) {
     const message =
       data.errors?.map((e) => e.message).join("; ") ||
       `Browser Run request failed (${res.status})`;
+    throwIfRateLimited(res, message);
     throw new Error(message);
   }
   return data.result as T;
@@ -72,6 +75,7 @@ export async function fetchPdf(
   url: string,
 ): Promise<{ pdfBase64: string; msUsed: string | null }> {
   const res = await env.BROWSER.quickAction("pdf", { url });
+  throwIfRateLimited(res);
   if (!res.ok) {
     throw new Error(
       `Browser Run returned ${res.status} while rendering a PDF for ${url}`,
